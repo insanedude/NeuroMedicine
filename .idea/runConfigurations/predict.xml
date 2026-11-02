@@ -1,6 +1,6 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="7. Скринінг знімків" type="PythonConfigurationType" factoryName="Python">
-    <module name="NeuroMedicine" />
+    <module name="neuromed" />
     <option name="ENV_FILES" value="" />
     <option name="INTERPRETER_OPTIONS" value="" />
     <option name="PARENT_ENVS" value="true" />
@@ -13,6 +13,8 @@
     <option name="IS_MODULE_SDK" value="true" />
     <option name="ADD_CONTENT_ROOTS" value="true" />
     <option name="ADD_SOURCE_ROOTS" value="true" />
+    <option name="DEBUG_JUST_MY_CODE" value="true" />
+    <option name="RUN_TOOL" value="" />
     <option name="SCRIPT_NAME" value="neuromed" />
     <option name="PARAMETERS" value="predict --seg runs/segmentation/checkpoints/final.pt --cls runs/classifier/checkpoints/final.pt --input data/processed/papila/images --out runs/predictions" />
     <option name="SHOW_COMMAND_LINE" value="false" />
