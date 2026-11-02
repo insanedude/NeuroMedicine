@@ -89,6 +89,11 @@ def test_classifier_run_with_distillation_and_screening(seg_run, synthetic_dir, 
     pipeline = ScreeningPipeline(seg_run / "checkpoints" / "final.pt", final)
     image = load_records([synthetic_dir], "segmenter", ["disc"])[0].image
     result = pipeline.analyze(read_rgb(image))
-    assert set(result["summary"]) == {"disc_found", "glaucoma_suspected"}
-    for finding in result["findings"]:
+    summary, findings = result["summary"], result["findings"]
+    assert set(summary) == {"disc_found", "extra_detections", "glaucoma_suspected"}
+    for finding in findings:
         assert set(finding["probs"]) == set(labels)
+    primary = [f for f in findings if f["primary"]]
+    assert len(primary) == int(summary["disc_found"])  # на знімку один диск
+    if primary:
+        assert summary["glaucoma_suspected"] == primary[0]["flags"]["glaucoma"]

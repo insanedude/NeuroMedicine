@@ -85,10 +85,14 @@ class ScreeningPipeline:
                 finding["_crop"] = crop
             findings.append(finding)
         findings.sort(key=lambda f: f["score"], reverse=True)
+        # на знімку один диск: висновок робиться за найупевненішим валідним виявленням,
+        # решта (уламки маски на нечітких знімках) лишається у findings як додаткові виявлення
         valid = [f for f in findings if f.get("flags", {}).get("valid_image", True)]
-        summary = {"disc_found": bool(valid)}
+        for f in findings:
+            f["primary"] = bool(valid) and f is valid[0]
+        summary = {"disc_found": bool(valid), "extra_detections": max(0, len(findings) - 1)}
         if self.cls is not None and "glaucoma" in self.labels:
-            summary["glaucoma_suspected"] = any(f["flags"]["glaucoma"] for f in valid)
+            summary["glaucoma_suspected"] = bool(valid) and valid[0]["flags"]["glaucoma"]
         return {"findings": findings, "summary": summary, "prob": prob, "square": square,
                 "seconds": time.perf_counter() - start}
 
@@ -108,11 +112,12 @@ class ScreeningPipeline:
         cv2.drawContours(overlay, contours, -1, (0, 255, 0), thickness)
         for k, f in enumerate(result["findings"]):
             x0, y0, x1, y1 = f.get("crop_box_square", f["bbox_square"])
-            cv2.rectangle(overlay, (x0, y0), (x1, y1), (255, 255, 0), thickness)
+            color = (255, 255, 0) if f["primary"] else (160, 160, 160)  # основний диск — жовтий, решта — сірі
+            cv2.rectangle(overlay, (x0, y0), (x1, y1), color, thickness)
             if "probs" in f:
                 text = " ".join(f"{name[:1].upper()}{p:.2f}" for name, p in f["probs"].items())
                 cv2.putText(overlay, text, (max(0, x0), max(20, y0 - 8)), cv2.FONT_HERSHEY_SIMPLEX,
-                            side / 1200, (255, 255, 0), thickness)
+                            side / 1200, color, thickness)
                 write_image(out_dir / f"{stem}_disc{k}.png", f.pop("_crop"))
                 f["crop"] = f"{stem}_disc{k}.png"
         if side > 1024:
@@ -133,10 +138,10 @@ def run_batch(pipeline: ScreeningPipeline, inputs: str | Path, out_dir: str | Pa
         json.dump(results, fh, ensure_ascii=False, indent=2)
     with open(out_dir / "results.csv", "w", encoding="utf-8", newline="") as fh:
         writer = csv.writer(fh)
-        header = ["image", "disc_found", "glaucoma_suspected", "discs", "best_score", "best_probs", "seconds"]
+        header = ["image", "disc_found", "glaucoma_suspected", "detections", "disc_score", "disc_probs", "seconds"]
         writer.writerow(header)
         for r in results:
-            best = r["findings"][0] if r["findings"] else {}
+            best = next((f for f in r["findings"] if f["primary"]), r["findings"][0] if r["findings"] else {})
             writer.writerow([r["image"], r["disc_found"], r.get("glaucoma_suspected", ""), len(r["findings"]),
                              f"{best.get('score', 0):.3f}" if best else "",
                              json.dumps(best.get("probs", {})), f"{r['seconds']:.3f}"])
