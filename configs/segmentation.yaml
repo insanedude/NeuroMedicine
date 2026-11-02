@@ -1,0 +1,93 @@
+# Сегментатор зорового нерва (диска): VGG-16 → U-Net-подібна мережа, ітеративне зжимання.
+# Запуск:  python -m neuromed compress --config configs/segmentation.yaml
+name: segmentation
+output_dir: runs
+seed: 42
+device: auto                      # auto | cpu | cuda
+
+data:
+  datasets:                       # підготовлені `python -m neuromed prepare ...`
+    - data/processed/papila
+    - data/processed/zenodo_dg
+  input_size: 288                 # 576 → ×0.5, як у вихідному коді
+  batch_size: 8
+  val_fraction: 0.15
+  test_fraction: 0.15
+  chunks: 5                       # непересічні збірні частини навчальної вибірки
+  epoch_strategy: kfold           # kfold (стаття) | alternate (інструкція: по черзі на частинах) | full
+  preprocess:                     # стаття, розд. 3.2
+    hsv_s_equalize: true
+    clahe: true
+    clahe_clip: 2.0
+    clahe_grid: 16
+    grayscale: true
+  augment:
+    rotate_deg: 20
+    shear_deg: 8
+    scale_min: 0.9
+    scale_max: 1.1
+    blur_prob: 0.25
+    artifact_prob: 0.3
+  hard_examples:
+    enabled: true
+    replay_prob: 0.5
+
+model:
+  type: segmenter
+  base: 64
+  pretrained: true                # трансплантація блоків 1–4 VGG-16
+  dropout_kind: element
+  labels: [disc]
+
+loss:
+  pos_weight: 3.0
+  neg_weight: 1.0
+  dice_weight: 1.0
+
+train:                            # ітерація 0
+  max_epochs: 60
+  min_epochs: 10
+  lr: 1.0e-4
+  freeze_transferred_epochs: 2
+  patience: 8
+  target:                         # «достатні показники»: повнота виявлення ~100 %
+    det_recall: 0.99
+    dice: 0.85
+  selection: [det_recall, dice]
+
+compress:
+  prune_ratio: 0.5                # основа 64 → 32 → 16 → 8
+  min_prune_ratio: 0.125
+  retry_smaller_ratio: true
+  importance: l2
+  min_channels: 4
+  max_iterations: 8
+  spread_epochs: 6                # 4.1  dropout 0.15 → 0.5
+  dropout_start: 0.15
+  dropout_max: 0.5
+  squeeze_epochs: 12              # 4.3  dropout 0.5 → 0, частка нормування 0 → 0.95
+  norm_max: 0.95
+  norm_method: both               # штраф у втратах + обмеження норми (penalty | projection | both)
+  lr_scale_after_cut: 0.5         # 4.4  менший крок після вирізання
+  stabilize_min_epochs: 4         # 4.5
+  stabilize_max_epochs: 30
+  stabilize_patience: 6
+  acceptance:                     # 4.6  інакше — «фейлить» → відкат
+    minimum:
+      det_recall: 0.95
+    max_drop:
+      det_recall: 0.02
+      dice: 0.04
+
+distill:
+  enabled: false                  # true → вчитель = ітерація 0
+  alpha: 0.5
+  temperature: 2.0
+
+eval:
+  threshold: 0.5
+  min_component_frac: 0.0005
+  detection_iou: 0.2
+  edge_cases: 10
+  benchmark_threads: 4
+  benchmark_runs: 20

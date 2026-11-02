@@ -1,0 +1,47 @@
+# Швидка перевірка всього конвеєра на синтетичних даних (хвилини навіть на CPU).
+#   python -m neuromed prepare synthetic
+#   python -m neuromed compress --config configs/smoke_synthetic.yaml
+name: smoke_synthetic
+output_dir: runs
+device: auto
+
+data:
+  datasets: [data/processed/synthetic]
+  input_size: 96
+  batch_size: 8
+  chunks: 4
+
+model:
+  type: segmenter
+  base: 16
+  pretrained: false
+  labels: [disc]
+
+train:
+  max_epochs: 20
+  min_epochs: 5
+  lr: 1.0e-3
+  patience: 4
+  target:
+    det_recall: 0.95
+    dice: 0.7
+  selection: [det_recall, dice]
+
+compress:
+  prune_ratio: 0.5
+  min_prune_ratio: 0.25
+  min_channels: 2
+  max_iterations: 3
+  spread_epochs: 2
+  squeeze_epochs: 4
+  stabilize_min_epochs: 2
+  stabilize_max_epochs: 8
+  stabilize_patience: 3
+  acceptance:
+    minimum:
+      det_recall: 0.85
+    max_drop:
+      dice: 0.1
+
+eval:
+  benchmark_runs: 5

@@ -1,0 +1,14 @@
+# PyTorch з підтримкою CUDA ставиться окремо, ДО цього файлу (колеса з PyPI для Windows — лише CPU):
+#   pip install torch torchvision --index-url https://download.pytorch.org/whl/cu130
+# Без відеокарти NVIDIA достатньо `pip install -r requirements.txt` (CPU-збірка).
+torch>=2.2
+torchvision>=0.17
+numpy>=1.26
+opencv-python-headless>=4.9
+PyYAML>=6.0
+openpyxl>=3.1
+matplotlib>=3.8
+
+# Розробка
+pytest>=8
+ruff>=0.5

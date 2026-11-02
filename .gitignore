@@ -1,0 +1,29 @@
+# Віртуальне середовище та кеші Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+build/
+dist/
+
+# Дані: завантажуються й готуються командами з README
+data/raw/
+data/processed/
+
+# Результати запусків (чекпойнти, журнали, звіти). Підсумкові звіти копіюються в docs/results/
+runs/
+*.pt
+*.pth
+
+# PyCharm: особисті налаштування (спільні конфігурації запуску лежать у .idea/runConfigurations/)
+.idea/workspace.xml
+.idea/shelf/
+.idea/usage.statistics.xml
+.idea/dictionaries/
+.idea/tasks.xml
+.idea/misc.xml
+.idea/dataSources*
+.idea/httpRequests/
